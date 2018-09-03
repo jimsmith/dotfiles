@@ -48,6 +48,10 @@ mkdir -p ~/git_repos/
 #sed -i='' 's/all_elasticache_clusters = False/all_elasticache_clusters = True/g' ec2.ini
 #sed -i='' 's/all_elasticache_nodes = False/all_elasticache_nodes = True/g' ec2.ini
 
+#### VERY IMPORTANT ####
+# COMMENT OUT THIS LINE in ec2.py:     account_id = boto.connect_iam().get_user().arn.split(':')[4]
+# This is so ansible will work across sts (using boto as it's old and ansible is working to goto boto3 but in the meantime...
+
 export PATH=~/miniconda3/bin:~/miniconda3/envs/awscli/bin:~/.local/bin:$PATH
 # source ~/conda_auto_env.sh
 
@@ -62,6 +66,7 @@ function aws_set() {
    export AWS_ACCESS_KEY_ID=$(aws --profile $profile configure get aws_access_key_id)
    export AWS_SECRET_ACCESS_KEY=$(aws --profile $profile configure get aws_secret_access_key)
    export AWS_SESSION_TOKEN=$(aws --profile $profile configure get aws_session_token)
+   export AWS_SECURITY_TOKEN=$(aws --profile $profile configure get aws_security_token)
    export AWS_PROFILE=AWS_PROFILE_NAME_HERE_FROM_aws_config_file
 }
 
