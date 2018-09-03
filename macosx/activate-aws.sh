@@ -49,22 +49,37 @@ mkdir -p ~/git_repos/
 #sed -i='' 's/all_elasticache_nodes = False/all_elasticache_nodes = True/g' ec2.ini
 
 export PATH=~/miniconda3/bin:~/miniconda3/envs/awscli/bin:~/.local/bin:$PATH
-
+# source ~/conda_auto_env.sh
 
 source deactivate awscli
 source activate awscli
-
-rm -f ~/.aws/credentials
-unset AWS_PROFILE                                                                                                                                                                                            
-unset AWS_ACCESS_KEY_ID                                                                                                                                                                                      
-unset AWS_SECRET_ACCESS_KEY                                                                                                                                                                                  
-unset AWS_SESSION_TOKEN 
-
-rm -f ~/.aws/adfs_cookies
-aws-adfs reset --profile=aws-adfs
-aws-adfs login --adfs-host=SERVERNAME.HERE --profile=aws-adfs
-export AWS_PROFILE=AWS_PROFILE_NAME_HERE
 complete -C '~/.conda/envs/awscli/bin/aws_completer' aws
+
+function aws_set() {
+  echo "Setting AWS setup..."
+   profile=aws-adfs
+   aws-adfs login --adfs-host=SERVER_NAME_HERE --profile=$profile
+   export AWS_ACCESS_KEY_ID=$(aws --profile $profile configure get aws_access_key_id)
+   export AWS_SECRET_ACCESS_KEY=$(aws --profile $profile configure get aws_secret_access_key)
+   export AWS_SESSION_TOKEN=$(aws --profile $profile configure get aws_session_token)
+   export AWS_PROFILE=AWS_PROFILE_NAME_HERE_FROM_aws_config_file
+}
+
+function aws_unset() {
+   echo "Unsetting AWS setup..."                                                                                                                                                                            
+   unset AWS_PROFILE                                                                                                                                                                                            
+   unset AWS_ACCESS_KEY_ID                                                                                                                                                                                      
+   unset AWS_SECRET_ACCESS_KEY                                                                                                                                                                                  
+   unset AWS_SESSION_TOKEN                                                                                                                                                                                      
+   sed -n '/profile aws-adfs/q;p' ~/.aws/config > /tmp/tmpawsconfig                                                                                                                                             
+   mv /tmp/tmpawsconfig ~/.aws/config                                                                                                                                                                           
+   rm -f ~/.aws/credentials                                                                                                                                                                                     
+   rm -f ~/.aws/adfs_cookies                                                                                                                                                                                    
+   aws-adfs reset                                                                                                                                                                                               
+ }
+
+aws_unset
+aws_set
 
 # Set a workaround for the High Sierra issue
 # objc[34976]: +[__NSPlaceholderDate initialize] may have been in progress in another thread when fork() was called.
@@ -80,9 +95,6 @@ alias gitrepos='cd ~/git_repos/'
 
 export ANSIBLE_INVENTORY=~/ansible/ec2.py
 export EC2_INI_PATH=~/ansible/ec2.ini
-export AWS_ACCESS_KEY_ID=$(aws --profile $AWS_PROFILE configure get aws_access_key_id)
-export AWS_SECRET_ACCESS_KEY=$(aws --profile $AWS_PROFILE configure get aws_secret_access_key)
-export AWS_SESSION_TOKEN=$(aws --profile $AWS_PROFILE configure get aws_session_token)
 
 
 # sanity check
