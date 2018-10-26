@@ -1,0 +1,106 @@
+# source this in your .*rc file, whether .bashrc or .zshrc (and maybe others),
+# ie. add following line:
+# source PATH_TO/.aws_profiler
+#
+#
+# USAGE:
+# 1. to switch profile - PROFILE_NAME must be a valid profile in ~/.aws/credentials or
+#   sp PROFILE_NAME
+# 2. to reset profile and any explicit keys
+#   resp
+# 3. to check existing profile
+#   cap
+#
+#
+
+# switch aws profile
+sp(){
+    SP_ARG=$1
+
+    if [ -n "$SP_ARG" ]; then
+        CHECK_PROFILE=`grep "\[$SP_ARG\]" ~/.aws/credentials`
+        CHECK_PROFILE2=`grep "\[profile $SP_ARG\]" ~/.aws/config`
+        if [ -n "$CHECK_PROFILE" ] || [ -n "$CHECK_PROFILE2" ]; then
+            resp
+            echo "Setting AWS profile to $SP_ARG";
+            export AWS_PROFILE=$SP_ARG
+        else
+            echo "AWS profile $1 does not exist"
+        fi
+    else
+        echo "Setting AWS profile to NULL";
+        unset AWS_PROFILE
+    fi
+
+}
+
+# show current aws profile
+cap(){
+    echo "Current AWS profile is set to: $AWS_PROFILE"
+}
+
+# reset aws profile and keys
+resp(){
+    echo "Resetting AWS profile and keys"
+    unset AWS_PROFILE
+    unset AWS_ACCESS_KEY_ID
+    unset AWS_SECRET_ACCESS_KEY
+    unset AWS_SESSION_TOKEN
+}
+
+# new current aws profile
+ncap(){
+
+    # set this to /dev/null if no need for debug log
+    DEBUG=/tmp/aws_profiler.log
+
+      if [ -z ${AWS_ACCESS_KEY_ID+x} ] && [ -z ${AWS_SECRET_ACCESS_KEY+x} ]; then
+
+        # both AWS keys are not set, do nothing
+        echo "both AWS keys are not set, do nothing" >> $DEBUG
+        if [ -z ${AWS_PROFILE+x} ]; then
+
+          # AWS profile not set, do nothing
+          echo "AWS profile not set, do nothing"  >> $DEBUG
+
+        else
+
+          # AWS profile set, export as CURRENT_AWS
+          echo "# AWS profile set, export as CURRENT_AWS"  >> $DEBUG
+          unset CURRENT_AWS
+          export CURRENT_AWS=$AWS_PROFILE
+          echo $CURRENT_AWS
+        fi
+      else
+        # both aws keys are set
+        echo "# both aws keys are set"  >> $DEBUG
+        if [ -z ${CURRENT_AWS+x} ]; then
+
+          # CURRENT_AWS and its source keys not set, setting
+          echo "# CURRENT_AWS and its source keys not set, setting"  >> $DEBUG
+          export CURRENT_AWS=$(aws iam list-account-aliases --output text | awk '{print $2}')
+          export CURRENT_AWS_SOURCE_KEYS=$AWS_ACCESS_KEY_ID$AWS_SECRET_ACCESS_KEY$AWS_SESSION_TOKEN
+          echo $CURRENT_AWS
+
+        else
+
+          # CURRENT_AWS variable set, let's verify it comes from current keys
+          echo "# CURRENT_AWS variable set, let's verify it comes from current keys"  >> $DEBUG
+          if [[ $CURRENT_AWS_SOURCE_KEYS  == $AWS_ACCESS_KEY_ID$AWS_SECRET_ACCESS_KEY$AWS_SESSION_TOKEN ]]; then
+
+            # nothing to do, our CURRENT_AWS variable comes from existing keys
+            echo "# nothing to do, our CURRENT_AWS variable comes from existing keys"  >> $DEBUG
+            echo $CURRENT_AWS
+
+          else
+
+            # refresh  value CURRENT_AWS as it doesn't come from CURRENT_AWS_SOURCE_KEYS keys
+            echo "# refresh  value CURRENT_AWS as it doesn't come from CURRENT_AWS_SOURCE_KEYS keys"  >> $DEBUG
+            export CURRENT_AWS=$(aws iam list-account-aliases --output text | awk '{print $2}')
+            export CURRENT_AWS_SOURCE_KEYS=$AWS_ACCESS_KEY_ID$AWS_SECRET_ACCESS_KEY$AWS_SESSION_TOKEN
+            echo $CURRENT_AWS
+
+        fi
+      fi
+    fi
+}
